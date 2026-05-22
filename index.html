@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clothes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#f0f4ff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+h2.sr-only{position:absolute;left:-9999px}
+
+/* NAV */
+.nav{display:flex;gap:10px;padding:16px 12px 8px;flex-wrap:wrap;justify-content:center;width:100%}
+.nav button{padding:10px 22px;border:2px solid #7C6EFF;border-radius:24px;background:#fff;color:#7C6EFF;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
+.nav button.active,.nav button:hover{background:#7C6EFF;color:#fff}
+
+/* SCREEN */
+.screen{display:none;width:100%;max-width:780px;padding:10px 12px 40px;flex:1}
+.screen.active{display:block}
+
+/* ─── FLASHCARDS ─── */
+.fc-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:10px}
+.card{width:min(300px,90vw);height:min(300px,90vw);perspective:600px;cursor:pointer;position:relative}
+.card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .4s}
+.card.flipped .card-inner{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:2.5px solid #c5baff;box-shadow:0 4px 18px #0001}
+.card-face.back{transform:rotateY(180deg);background:#7C6EFF}
+.card-face img{width:70%;height:70%;object-fit:contain}
+.card-face .word{font-size:22px;font-weight:700;color:#3a2fa8}
+.card-face.back .word{color:#fff;font-size:24px}
+.fc-btn-row{display:flex;gap:12px;align-items:center}
+.btn{padding:10px 24px;border-radius:20px;border:none;background:#7C6EFF;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:.12s}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:#fff;border:2px solid #7C6EFF;color:#7C6EFF}
+.fc-counter{font-size:14px;color:#666}
+
+/* ─── QUIZ ─── */
+.quiz-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:8px}
+.quiz-top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:center}
+.hearts{font-size:24px;letter-spacing:4px}
+.hear-btn{padding:10px 22px;border-radius:20px;border:none;background:#5548E0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.hear-btn:hover{background:#3a2fa8}
+.grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+@media(max-width:480px){.grid6{grid-template-columns:repeat(2,1fr)}}
+.qcard{background:#fff;border-radius:14px;border:2.5px solid #ddd;padding:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:.15s}
+.qcard:hover{border-color:#7C6EFF;background:#f5f2ff}
+.qcard img{width:100%;max-height:110px;object-fit:contain}
+.qcard .lbl{font-size:13px;font-weight:600;color:#444}
+.qcard.correct{border-color:#34c97a;background:#e6faf1}
+.qcard.wrong{border-color:#e53935;background:#ffeaea;animation:shake .3s}
+.q-msg{font-size:18px;font-weight:700;text-align:center;min-height:28px}
+.q-msg.ok{color:#34c97a}
+.q-msg.no{color:#e53935}
+.score-box{text-align:center;font-size:20px;font-weight:700;color:#3a2fa8;padding:20px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* ─── MEMORY ─── */
+.mem-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:8px}
+.mem-stats{display:flex;gap:20px;font-size:14px;color:#555;font-weight:600}
+.mem-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;width:100%}
+@media(max-width:520px){.mem-grid{grid-template-columns:repeat(4,1fr)}}
+.mcard{aspect-ratio:1;background:#7C6EFF;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:transform .2s;border:2.5px solid transparent}
+.mcard:hover{transform:scale(1.05)}
+.mcard .mfront{display:none;width:85%;height:85%;object-fit:contain;pointer-events:none}
+.mcard.revealed .mfront{display:block}
+.mcard.revealed{background:#fff;border-color:#c5baff}
+.mcard.matched{background:#e6faf1;border-color:#34c97a;cursor:default}
+.mcard.matched .mfront{display:block}
+.mcard .back-icon{font-size:22px;color:#ffffffcc;pointer-events:none}
+.mcard.revealed .back-icon,.mcard.matched .back-icon{display:none}
+.mem-win{text-align:center;font-size:20px;font-weight:700;color:#3a2fa8;padding:16px}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Clothes vocabulary games for Grade 1 — Flashcards, Quiz, Memory</h2>
+
+<div class="nav">
+  <button class="active" onclick="show('fc')">🃏 Flashcards</button>
+  <button onclick="show('quiz')">🎯 Quiz</button>
+  <button onclick="show('mem')">🧩 Memory</button>
+</div>
+
+<!-- ════ FLASHCARDS ════ -->
+<div id="fc" class="screen active">
+  <div class="fc-wrap">
+    <div class="card" id="fc-card" onclick="flipCard()">
+      <div class="card-inner">
+        <div class="card-face front">
+          <img id="fc-img" src="" alt="">
+          <div class="word" id="fc-word-f"></div>
+        </div>
+        <div class="card-face back">
+          <div class="word" id="fc-word-b"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-btn-row">
+      <button class="btn ghost" onclick="fcNav(-1)">◀ Prev</button>
+      <span class="fc-counter" id="fc-ctr">1 / 12</span>
+      <button class="btn" onclick="fcNav(1)">Next ▶</button>
+    </div>
+    <button class="btn" style="background:#5548E0" onclick="speakCurrent()">🔊 Listen</button>
+  </div>
+</div>
+
+<!-- ════ QUIZ ════ -->
+<div id="quiz" class="screen">
+  <div class="quiz-wrap">
+    <div class="quiz-top">
+      <div class="hearts" id="q-hearts">❤️❤️❤️</div>
+      <button class="hear-btn" id="q-hear-btn" onclick="speakQuizWord()">🔊 Listen again</button>
+    </div>
+    <div class="q-msg" id="q-msg">Listen and tap the right picture!</div>
+    <div class="grid6" id="q-grid"></div>
+    <div class="score-box" id="q-score" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ════ MEMORY ════ -->
+<div id="mem" class="screen">
+  <div class="mem-wrap">
+    <div class="mem-stats">
+      <span>Moves: <b id="m-moves">0</b></span>
+      <span>Pairs: <b id="m-pairs">0</b>/12</span>
+      <button class="btn" style="padding:6px 16px;font-size:13px" onclick="initMemory()">↺ New game</button>
+    </div>
+    <div class="mem-grid" id="m-grid"></div>
+    <div class="mem-win" id="m-win"></div>
+  </div>
+</div>
+
+<script>
+const WORDS=[
+  {word:'dress',    img:'img/1.jpg'},
+  {word:'sunglasses',img:'img/2.jpg'},
+  {word:'handbag',  img:'img/3.jpg'},
+  {word:'hat',      img:'img/4.jpg'},
+  {word:'shirt',    img:'img/5.jpg'},
+  {word:'jeans',    img:'img/6.jpg'},
+  {word:'jacket',   img:'img/7.jpg'},
+  {word:'shoes',    img:'img/8.jpg'},
+  {word:'skirt',    img:'img/9.jpg'},
+  {word:'socks',    img:'img/10.jpg'},
+  {word:'trousers', img:'img/11.jpg'},
+  {word:'T-shirt',  img:'img/12.jpg'}
+];
+
+/* ── helpers ── */
+function speak(w){
+  const u=new SpeechSynthesisUtterance(w);
+  u.lang='en-US';u.rate=.85;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='quiz')initQuiz();
+  if(id==='mem')initMemory();
+}
+
+/* ════ FLASHCARDS ════ */
+let fcIdx=0;
+function renderFC(){
+  const c=WORDS[fcIdx];
+  document.getElementById('fc-img').src=c.img;
+  document.getElementById('fc-img').alt=c.word;
+  document.getElementById('fc-word-f').textContent=c.word;
+  document.getElementById('fc-word-b').textContent=c.word;
+  document.getElementById('fc-ctr').textContent=`${fcIdx+1} / ${WORDS.length}`;
+  document.getElementById('fc-card').classList.remove('flipped');
+  speak(c.word);
+}
+function flipCard(){
+  document.getElementById('fc-card').classList.toggle('flipped');
+  speak(WORDS[fcIdx].word);
+}
+function fcNav(d){fcIdx=(fcIdx+d+WORDS.length)%WORDS.length;renderFC()}
+function speakCurrent(){speak(WORDS[fcIdx].word)}
+renderFC();
+
+/* ════ QUIZ ════ */
+let qAnswer='',qLives=3,qScore=0,qTotal=0,qLocked=false;
+function initQuiz(){
+  qLives=3;qScore=0;qTotal=0;qLocked=false;
+  document.getElementById('q-score').style.display='none';
+  document.getElementById('q-grid').style.display='grid';
+  document.getElementById('q-hear-btn').style.display='flex';
+  document.getElementById('q-hearts').style.display='block';
+  document.getElementById('q-msg').textContent='Listen and tap the right picture!';
+  nextQuizRound();
+}
+function nextQuizRound(){
+  if(qLives<=0){endQuiz();return}
+  qLocked=false;
+  const pool=shuffle([...WORDS]).slice(0,6);
+  const correct=pool[Math.floor(Math.random()*6)];
+  qAnswer=correct.word;
+  const grid=document.getElementById('q-grid');
+  grid.innerHTML='';
+  pool.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='qcard';
+    div.innerHTML=`<img src="${item.img}" alt="${item.word}"><div class="lbl">&nbsp;</div>`;
+    div.onclick=()=>checkQ(div,item.word);
+    grid.appendChild(div);
+  });
+  document.getElementById('q-msg').className='q-msg';
+  document.getElementById('q-msg').textContent='';
+  setTimeout(()=>speak(qAnswer),300);
+}
+function speakQuizWord(){speak(qAnswer)}
+function checkQ(el,word){
+  if(qLocked)return;
+  qLocked=true;
+  qTotal++;
+  if(word===qAnswer){
+    el.classList.add('correct');
+    document.getElementById('q-msg').className='q-msg ok';
+    document.getElementById('q-msg').textContent='✅ Correct!';
+    qScore++;
+    setTimeout(nextQuizRound,900);
+  } else {
+    el.classList.add('wrong');
+    qLives--;
+    updateHearts();
+    document.getElementById('q-msg').className='q-msg no';
+    document.getElementById('q-msg').textContent='❌ Try again!';
+    setTimeout(()=>{el.classList.remove('wrong');qLocked=false;speak(qAnswer)},700);
+  }
+}
+function updateHearts(){
+  const h=['❤️','❤️','❤️'];
+  for(let i=0;i<3-qLives;i++)h[2-i]='🖤';
+  document.getElementById('q-hearts').textContent=h.join('');
+  if(qLives<=0)setTimeout(endQuiz,400);
+}
+function endQuiz(){
+  document.getElementById('q-grid').style.display='none';
+  document.getElementById('q-hear-btn').style.display='none';
+  document.getElementById('q-hearts').style.display='none';
+  document.getElementById('q-msg').textContent='';
+  const s=document.getElementById('q-score');
+  s.style.display='block';
+  s.innerHTML=`🎉 Game over!<br>Score: ${qScore} / ${qTotal}<br><br><button class="btn" onclick="initQuiz()">Play again</button>`;
+}
+
+/* ════ MEMORY ════ */
+let mFirst=null,mSecond=null,mMoves=0,mPairs=0,mBusy=false;
+function initMemory(){
+  mFirst=mSecond=null;mMoves=0;mPairs=0;mBusy=false;
+  document.getElementById('m-moves').textContent=0;
+  document.getElementById('m-pairs').textContent=0;
+  document.getElementById('m-win').textContent='';
+  const pairs=WORDS.map((w,i)=>[
+    {word:w.word,img:w.img,id:i,type:'img'},
+    {word:w.word,img:w.img,id:i,type:'word'}
+  ]).flat();
+  shuffle(pairs);
+  const grid=document.getElementById('m-grid');
+  grid.innerHTML='';
+  pairs.forEach((item,idx)=>{
+    const div=document.createElement('div');
+    div.className='mcard';
+    div.dataset.id=item.id;
+    div.dataset.type=item.type;
+    div.dataset.idx=idx;
+    div.innerHTML=`<img class="mfront" src="${item.img}" alt="${item.word}"><span class="back-icon">?</span>`;
+    div.onclick=()=>revealMem(div,item);
+    grid.appendChild(div);
+  });
+}
+function revealMem(div,item){
+  if(mBusy||div.classList.contains('matched')||div.classList.contains('revealed'))return;
+  div.classList.add('revealed');
+  speak(item.word);
+  if(!mFirst){mFirst={div,item};return}
+  mSecond={div,item};
+  mMoves++;
+  document.getElementById('m-moves').textContent=mMoves;
+  mBusy=true;
+  if(mFirst.item.id===mSecond.item.id&&mFirst.item.type!==mSecond.item.type){
+    mFirst.div.classList.add('matched');
+    mSecond.div.classList.add('matched');
+    mPairs++;
+    document.getElementById('m-pairs').textContent=mPairs;
+    mFirst=mSecond=null;mBusy=false;
+    if(mPairs===12){
+      document.getElementById('m-win').innerHTML=`🎉 Well done! All pairs found in ${mMoves} moves!<br><br><button class="btn" onclick="initMemory()">Play again</button>`;
+    }
+  } else {
+    setTimeout(()=>{
+      mFirst.div.classList.remove('revealed');
+      mSecond.div.classList.remove('revealed');
+      mFirst=mSecond=null;mBusy=false;
+    },900);
+  }
+}
+initMemory();
+</script>
+</body>
+</html>
